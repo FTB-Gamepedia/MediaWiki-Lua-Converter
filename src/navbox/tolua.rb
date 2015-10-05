@@ -1,33 +1,54 @@
 require 'mediawiki-butt'
 
-butt = MediaWiki::Butt.new("http://ftb.gamepedia.com/api.php")
-moduletext = butt.get_text("Module:Mods/list")
+$butt = MediaWiki::Butt.new("http://ftb.gamepedia.com/api.php")
+$moduletext = $butt.get_text("Module:Mods/list")
 
-puts "Please input your file containing your navbox"
-file_name = gets.chomp
-file = File.read(file_name)
+def convert(template_text)
+  # Remove Translate crap because it makes everything way harder.
+  template_text = template_text.gsub(/<translate>/, "")
+  template_text = template_text.gsub(/<\/translate>/, "")
+  template_text = template_text.gsub(/<!--T:\d{1,}-->\n/, "")
+  template_text = template_text.gsub(/<noinclude>/, "")
+  template_text = template_text.gsub(/<\/noinclude>/, "")
 
-# Remove Translate crap because it makes everything way harder.
-file = file.gsub(/<translate>/, "")
-file = file.gsub(/<\/translate>/, "")
-file = file.gsub(/<!--T:\d{1,}-->\n/, "")
-file = file.gsub(/<noinclude>/, "")
-file = file.gsub(/<\/noinclude>/, "")
+  # This is super messy, but works. Consider refactoring.
+  # FIXME: character class has duplicated range
+  title = template_text.match(/\|title\=\{\{[Ll]\|([^\}\}]*)/).to_s.gsub(/\|title=|{\{[Ll]\|/, "")
 
-# This is super messy, but works. Consider refactoring.
-title = file.match(/\|title\=\{\{[Ll]\|([^\}\}]*)/).to_s.gsub(/\|title=|{\{[Ll]\|/, "")
+  abbreviationline = $moduletext.match(/\s.*\s=\s\{\'#{title}/).to_s
+  abbreviation = abbreviationline.match(/\s(.*)\s=/)[1]
+  abbreviation = abbreviation.gsub(/\s/, '')
+  puts abbreviation
 
-# TODO: Get rid of shitty whitespace before and after abbreviation.
-abbreviationline = moduletext.match(/\s.*\s=\s\{\'#{title}/).to_s
-abbreviation = abbreviationline.match(/\s(.*)\s=/)[1]
-puts abbreviation
+  titles = template_text.scan(/\{\{[Nn]avbox subgroup\n.*\|title\=([^\n]*)\n/)
 
-titles = file.scan(/\{\{[Nn]avbox subgroup\n.*\|title\=([^\n]*)\n/)
-
-text = "--<languages />\n--<pre>\nlocal p = {}\np.navbox = function(navbox, highlightline, group, list, line, ni, l)\n\n"
-text = text + "local #{title.downcase} = --[[<translate>]] l{\"#{title}\"} --[[</translate>]]\n\n"
-titles.each do |tit|
-  #lmao
-  text = text + "local #{tit[0].downcase} = [=[<translate>#{tit[0]}</translate>]=]\n\n"
+  text = "--<languages />\n--<pre>\nlocal p = {}\np.navbox = function(navbox, highlightline, group, list, line, ni, l)\n\n"
+  text = text + "local #{title.downcase} = --[[<translate>]] l{\"#{title}\"} --[[</translate>]]\n\n"
+  titles.each do |tit|
+    #lmao
+    text = text + "local #{tit[0].downcase} = [=[<translate>#{tit[0]}</translate>]=]\n\n"
+  end
+  puts text
 end
-puts text
+
+valid = true
+while valid == true
+  print 'Please input your template\'s name: '
+  template_name = gets.chomp
+  # TODO: Allow for the user to put in Template:Navbox OpenBlocks,
+  #   Navbox OpenBlocks, or just OpenBlocks
+  template_name = "Template:Navbox #{template_name}"
+
+  $template_text = $butt.get_text(template_name)
+
+  if $template_text.nil?
+    puts 'Sorry, that is not a valid page. Please make sure you type the' \
+         ' right page, because it does spam the wiki with a fat GET'
+    valid = true
+  else
+    valid = false
+    break
+  end
+end
+
+convert($template_text)
