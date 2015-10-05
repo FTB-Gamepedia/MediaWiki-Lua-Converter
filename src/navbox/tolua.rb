@@ -31,8 +31,8 @@ def convert(template_text)
   puts text
 end
 
-valid = true
-while valid == true
+valid = false
+while valid == false
   print 'Please input your template\'s name: '
   template_name = gets.chomp
   # TODO: Allow for the user to put in Template:Navbox OpenBlocks,
@@ -44,9 +44,9 @@ while valid == true
   if $template_text.nil?
     puts 'Sorry, that is not a valid page. Please make sure you type the' \
          ' right page, because it does spam the wiki with a fat GET'
-    valid = true
-  else
     valid = false
+  else
+    valid = true
     break
   end
 end
