@@ -10,6 +10,7 @@ def convert(template_text)
   template_text = template_text.gsub(/<!--T:\d{1,}-->\n/, "")
   template_text = template_text.gsub(/<noinclude>/, "")
   template_text = template_text.gsub(/<\/noinclude>/, "")
+  puts template_text
 
   # This is super messy, but works. Consider refactoring.
   # FIXME: character class has duplicated range
@@ -22,11 +23,29 @@ def convert(template_text)
 
   titles = template_text.scan(/\{\{[Nn]avbox subgroup\n.*\|title\=([^\n]*)\n/)
 
+  # FIXME: This does not get the subgroup group names.
+  list_titles = template_text.scan(/\{\{[Nn]avbox subgroup\n.*\|group\d\=([^\n]*)\n/)
+
   text = "--<languages />\n--<pre>\nlocal p = {}\np.navbox = function(navbox, highlightline, group, list, line, ni, l)\n\n"
   text = text + "local #{title.downcase} = --[[<translate>]] l{\"#{title}\"} --[[</translate>]]\n\n"
   titles.each do |tit|
-    #lmao
-    text = text + "local #{tit[0].downcase} = [=[<translate>#{tit[0]}</translate>]=]\n\n"
+    tit = tit[0]
+    text = text + "local #{tit.downcase} = [=[<translate>#{tit}</translate>]=]\n\n"
+  end
+
+  list_titles.each do |tit|
+    tit = tit[0]
+    text = text + "local #{tit.downcase} = [=[<translate>#{tit}</translate>]=]\n\n"
+  end
+
+  text = text + "return navbox{title = #{title.downcase}, mod = \"#{abbreviation}\",\n"
+  titles.each do |tit|
+    tit = tit[0].downcase
+    text = text + "\tgroup{ name = \"#{tit}\", title = #{tit},\n"
+    list_titles.each do |ltit|
+      ltit = ltit[0].downcase
+      text = text + "\t\tlist{ title = #{ltit},\n"
+    end
   end
   puts text
 end
